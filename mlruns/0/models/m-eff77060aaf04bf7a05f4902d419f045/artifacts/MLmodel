@@ -1,0 +1,23 @@
+artifact_path: /home/tharangasg/projects/ML/Bank Marketing/mlruns/0/models/m-eff77060aaf04bf7a05f4902d419f045/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.13.10
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.9.0
+    skops_trusted_types: null
+mlflow_version: 3.13.0
+model_id: m-eff77060aaf04bf7a05f4902d419f045
+model_size_bytes: 33484819
+model_uuid: m-eff77060aaf04bf7a05f4902d419f045
+prompts: null
+run_id: 068f31af7cfd4cb3a06d9778ff4af4c3
+utc_time_created: '2026-06-09 03:32:12.074986'

@@ -1,0 +1,321 @@
+# ==========================================
+# Bank Marketing ML Pipeline Configuration
+# ==========================================
+# Predict if a client will subscribe a term deposit
+
+# Processing Engine Configuration
+processing:
+  default_engine: "pandas"
+  data_processing_engine: "pandas"
+  model_training_engine: "sklearn"
+  inference_engine: "pandas"
+
+# Data Configuration
+data:
+  raw_data_file: "bank-full.csv"
+  raw_data_dir: "data/raw"
+  delimiter: ";"  # Bank dataset uses semicolon separator
+
+data_paths:
+  raw_data: "data/raw/bank-full.csv"
+  processed_data: "data/processed/bank_processed.csv"
+  processed_dir: "data/processed"
+  artifacts_dir: "artifacts"
+  data_artifacts_dir: "artifacts/data"
+  train_artifacts_dir: "artifacts/train"
+  X_train: "artifacts/data/X_train.csv"
+  X_test: "artifacts/data/X_test.csv"
+  Y_train: "artifacts/data/Y_train.csv"
+  Y_test: "artifacts/data/Y_test.csv"
+
+# Column Configuration
+columns:
+  target: "y"
+  # No columns to drop — all are features (no ID/name columns in this dataset)
+  drop_columns: []
+  # Columns that need outlier detection
+  outlier_columns: ["age", "balance", "duration", "campaign", "pdays", "previous"]
+  # Nominal categorical columns (no inherent order)
+  nominal_columns: ["job", "marital", "education", "default", "housing", "loan", "contact", "month", "poutcome"]
+  # Binary columns (yes/no already, will be encoded)
+  binary_columns: ["default", "housing", "loan"]
+  # Numeric columns for scaling
+  numeric_columns: ["age", "balance", "duration", "day", "campaign", "pdays", "previous"]
+  # All feature columns used for model training
+  feature_columns:
+    - "age"
+    - "job"
+    - "marital"
+    - "education"
+    - "default"
+    - "balance"
+    - "housing"
+    - "loan"
+    - "contact"
+    - "day"
+    - "month"
+    - "duration"
+    - "campaign"
+    - "pdays"
+    - "previous"
+    - "poutcome"
+
+# Missing Values Configuration
+missing_values:
+  strategy: "fill"
+  methods:
+    # "unknown" values in categorical columns act as missing
+    job:
+      strategy: "fill"
+      method: "mode"
+      relevant_column: "job"
+    education:
+      strategy: "fill"
+      method: "mode"
+      relevant_column: "education"
+    contact:
+      strategy: "fill"
+      method: "mode"
+      relevant_column: "contact"
+    poutcome:
+      strategy: "fill"
+      method: "mode"
+      relevant_column: "poutcome"
+
+# Outlier Detection Configuration
+outlier_detection:
+  detection_method: "iqr"
+  handling_method: "cap"  # Cap instead of remove to preserve data
+  iqr_multiplier: 1.5
+  z_score_threshold: 3.0
+
+# Feature Binning Configuration
+feature_binning:
+  age_bins:
+    Young: [18, 30]
+    Middle: [30, 45]
+    Senior: [45, 60]
+    Elderly: [60, 100]
+  age_mapping:
+    Young: 0
+    Middle: 1
+    Senior: 2
+    Elderly: 3
+  balance_bins:
+    Negative: [-10000, 0]
+    Low: [0, 500]
+    Medium: [500, 5000]
+    High: [5000, 100000]
+  balance_mapping:
+    Negative: 0
+    Low: 1
+    Medium: 2
+    High: 3
+
+# Feature Encoding Configuration
+feature_encoding:
+  # Nominal columns to one-hot encode
+  nominal_columns: ["job", "marital", "contact", "month", "poutcome"]
+  # Binary columns to label encode (yes=1, no=0)
+  binary_columns: ["default", "housing", "loan"]
+  # Ordinal columns with custom order
+  ordinal_mappings:
+    education:
+      unknown: 0
+      primary: 1
+      secondary: 2
+      tertiary: 3
+
+# Feature Scaling Configuration
+feature_scaling:
+  scaling_type: "standard"  # StandardScaler for this dataset
+  columns_to_scale: ["age", "balance", "duration", "day", "campaign", "pdays", "previous"]
+
+# Data Splitting Configuration
+data_splitting:
+  split_type: "stratified"  # Important: dataset is imbalanced
+  test_size: 0.2
+  random_state: 42
+
+# Training Configuration
+training:
+  default_training_engine: "sklearn"
+  default_model_type: "random_forest"
+  default_training_strategy: "cv"
+  cv_folds: 5
+  random_state: 42
+  test_size: 0.2
+  
+  sklearn_training:
+    n_jobs: 1
+    verbose: 1
+
+# Model Configuration
+model:
+  training_engine: "sklearn"
+  model_type: "random_forest"
+  training_strategy: "cv"
+  model_path: "artifacts/models/bank_model.pkl"
+  
+  sklearn_model_types:
+    random_forest:
+      n_estimators: 200
+      max_depth: 15
+      min_samples_split: 5
+      min_samples_leaf: 2
+      random_state: 42
+      class_weight: "balanced"  # Handle class imbalance
+    gradient_boosting:
+      n_estimators: 200
+      max_depth: 5
+      learning_rate: 0.1
+      random_state: 42
+    xgboost:
+      n_estimators: 200
+      max_depth: 6
+      learning_rate: 0.1
+      random_state: 42
+      scale_pos_weight: 7  # Approximate ratio of no:yes
+    logistic_regression:
+      random_state: 42
+      max_iter: 1000
+      class_weight: "balanced"
+
+# Evaluation Configuration
+evaluation:
+  metrics:
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1-score"
+    - "roc_auc"
+  cv_folds: 5
+  random_state: 42
+
+# Inference Configuration
+inference:
+  model_name: "bank_marketing_model"
+  data_path: "artifacts/data/X_test.csv"
+  sample_size: 100
+  save_path: "artifacts/predictions/predictions.csv"
+  batch_size: 1000
+  return_proba: true
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "pipeline.log"
+
+# Pipeline Configuration
+pipeline:
+  data_pipeline_name: "bank_data_processing_pipeline"
+  training_pipeline_name: "bank_model_training_pipeline"
+  inference_pipeline_name: "bank_inference_pipeline"
+  enable_cache: false
+
+# ==========================================
+# Data Validation & Testing Configuration
+# ==========================================
+validation:
+  data_quality:
+    min_rows: 40000
+    min_columns: 16
+    max_missing_percentage: 5.0
+    max_duplicate_percentage: 1.0
+  
+  value_ranges:
+    age:
+      min: 18
+      max: 100
+    balance:
+      min: -10000
+      max: 200000
+    duration:
+      min: 0
+      max: 5000
+    campaign:
+      min: 1
+      max: 100
+    pdays:
+      min: -1
+      max: 999
+    previous:
+      min: 0
+      max: 300
+    day:
+      min: 1
+      max: 31
+  
+  categorical_values:
+    job:
+      - "admin."
+      - "unknown"
+      - "unemployed"
+      - "management"
+      - "housemaid"
+      - "entrepreneur"
+      - "student"
+      - "blue-collar"
+      - "self-employed"
+      - "retired"
+      - "technician"
+      - "services"
+    marital:
+      - "married"
+      - "divorced"
+      - "single"
+    education:
+      - "unknown"
+      - "secondary"
+      - "primary"
+      - "tertiary"
+    contact:
+      - "unknown"
+      - "telephone"
+      - "cellular"
+    month:
+      - "jan"
+      - "feb"
+      - "mar"
+      - "apr"
+      - "may"
+      - "jun"
+      - "jul"
+      - "aug"
+      - "sep"
+      - "oct"
+      - "nov"
+      - "dec"
+    poutcome:
+      - "unknown"
+      - "other"
+      - "failure"
+      - "success"
+  
+  class_balance:
+    target_column: "y"
+    min_minority_percentage: 5.0
+    max_majority_percentage: 95.0
+
+# ==========================================
+# Model Validation Configuration
+# ==========================================
+model_validation:
+  performance_thresholds:
+    accuracy: 0.80
+    roc_auc: 0.75
+  
+  quality_checks:
+    check_overfitting: true
+    check_feature_importance: true
+
+# ==========================================
+# MLflow Configuration
+# ==========================================
+mlflow:
+  tracking_uri: "sqlite:///mlflow.db"
+  experiment_name: "bank_marketing_experiment"
+  run_name_prefix: "run"
+  register_model: true
+  model_registry_name: "BankMarketingModel"
