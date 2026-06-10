@@ -11,6 +11,7 @@ import pandas as pd
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from src.model_inference import ModelInference
+import src.gcs_utils as gcs_utils
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ def inference_pipeline():
         results = inference.predict(df)
         
         save_path = config['inference']['save_path']
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        gcs_utils.ensure_dir(gcs_utils.dirname(save_path))
         results.to_csv(save_path, index=False)
         logger.info(f"Predictions saved to {save_path}")
         

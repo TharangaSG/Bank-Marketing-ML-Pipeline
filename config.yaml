@@ -17,16 +17,16 @@ data:
   delimiter: ";"  # Bank dataset uses semicolon separator
 
 data_paths:
-  raw_data: "data/raw/bank-full.csv"
-  processed_data: "data/processed/bank_processed.csv"
-  processed_dir: "data/processed"
-  artifacts_dir: "artifacts"
-  data_artifacts_dir: "artifacts/data"
-  train_artifacts_dir: "artifacts/train"
-  X_train: "artifacts/data/X_train.csv"
-  X_test: "artifacts/data/X_test.csv"
-  Y_train: "artifacts/data/Y_train.csv"
-  Y_test: "artifacts/data/Y_test.csv"
+  raw_data: "gs://tharanga-ml-data-bucket/bank-ml/data/raw/bank-full.csv"
+  processed_data: "gs://tharanga-ml-data-bucket/bank-ml/data/processed/bank_processed.csv"
+  processed_dir: "gs://tharanga-ml-data-bucket/bank-ml/data/processed"
+  artifacts_dir: "gs://tharanga-ml-data-bucket/bank-ml/artifacts"
+  data_artifacts_dir: "gs://tharanga-ml-data-bucket/bank-ml/artifacts/data"
+  train_artifacts_dir: "gs://tharanga-ml-data-bucket/bank-ml/artifacts/train"
+  X_train: "gs://tharanga-ml-data-bucket/bank-ml/artifacts/data/X_train.csv"
+  X_test: "gs://tharanga-ml-data-bucket/bank-ml/artifacts/data/X_test.csv"
+  Y_train: "gs://tharanga-ml-data-bucket/bank-ml/artifacts/data/Y_train.csv"
+  Y_test: "gs://tharanga-ml-data-bucket/bank-ml/artifacts/data/Y_test.csv"
 
 # Column Configuration
 columns:
@@ -152,10 +152,8 @@ training:
 
 # Model Configuration
 model:
-  training_engine: "sklearn"
-  model_type: "random_forest"
-  training_strategy: "cv"
-  model_path: "artifacts/models/bank_model.pkl"
+  model_type: "xgboost"  # Options: random_forest, xgboost, gradient_boosting, logistic_regression
+  model_path: "gs://tharanga-ml-data-bucket/bank-ml/artifacts/models/bank_model.pkl"
   
   sklearn_model_types:
     random_forest:
@@ -195,9 +193,9 @@ evaluation:
 # Inference Configuration
 inference:
   model_name: "bank_marketing_model"
-  data_path: "artifacts/data/X_test.csv"
+  data_path: "gs://tharanga-ml-data-bucket/bank-ml/artifacts/data/X_test.csv"
   sample_size: 100
-  save_path: "artifacts/predictions/predictions.csv"
+  save_path: "gs://tharanga-ml-data-bucket/bank-ml/artifacts/predictions/predictions.csv"
   batch_size: 1000
   return_proba: true
 

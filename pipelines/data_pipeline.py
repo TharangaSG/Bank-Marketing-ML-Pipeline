@@ -18,6 +18,7 @@ from src.outlier_detection import OutlierDetector, IQROutlierDetection
 from src.feature_encoding import BinaryEncodingStrategy, NominalEncodingStrategy, OrdinalEncodingStrategy, TargetEncodingStrategy
 from src.feature_scaling import StandardScalingStrategy
 from src.data_splitter import DataSplitter, StratifiedTrainTestSplitStrategy
+import src.gcs_utils as gcs_utils
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -33,9 +34,9 @@ def _run_pandas_pipeline(config):
     logger.info("STARTING DATA PIPELINE (PANDAS)")
     logger.info("=" * 80)
     
-    # Ensure directories exist
-    os.makedirs(config['data_paths']['processed_dir'], exist_ok=True)
-    os.makedirs(config['data_paths']['data_artifacts_dir'], exist_ok=True)
+    # Ensure directories exist (bypassed if GCS)
+    gcs_utils.ensure_dir(config['data_paths']['processed_dir'])
+    gcs_utils.ensure_dir(config['data_paths']['data_artifacts_dir'])
     
     # 1. Ingestion
     data_path = config['data_paths']['raw_data']
@@ -86,7 +87,9 @@ def _run_pandas_pipeline(config):
         'nominal': nominal_encoder.get_encoder_dicts(),
         'ordinal': ordinal_mappings
     }
-    joblib.dump(encoders, os.path.join(config['data_paths']['data_artifacts_dir'], 'encoders.pkl'))
+
+    encoders_path = gcs_utils.join_path(config['data_paths']['data_artifacts_dir'], 'encoders.pkl')
+    gcs_utils.save_artifact(encoders, encoders_path)
     
     # 6. Data Splitting (BEFORE scaling to prevent data leakage)
     splitter_strategy = StratifiedTrainTestSplitStrategy(
@@ -103,7 +106,8 @@ def _run_pandas_pipeline(config):
     X_test = scaler_strategy.transform(X_test, numeric_cols)
     
     # Save scaler (fitted on training data only)
-    joblib.dump(scaler_strategy.get_scaler(), os.path.join(config['data_paths']['data_artifacts_dir'], 'scaler.pkl'))
+    scaler_path = gcs_utils.join_path(config['data_paths']['data_artifacts_dir'], 'scaler.pkl')
+    gcs_utils.save_artifact(scaler_strategy.get_scaler(), scaler_path)
     
     # Save processed data
     logger.info("Saving processed datasets...")

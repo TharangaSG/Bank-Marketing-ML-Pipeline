@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import numpy as np
 from typing import Dict, Any, List, Union
+import src.gcs_utils as gcs_utils
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -35,16 +36,16 @@ class ModelInference:
         """Load model and preprocessing artifacts."""
         try:
             logger.info(f"Loading model from {self.model_path}")
-            self.model = joblib.load(self.model_path)
+            self.model = gcs_utils.load_artifact(self.model_path)
             
-            scaler_path = os.path.join(self.preprocessors_dir, 'scaler.pkl')
-            if os.path.exists(scaler_path):
-                self.scaler = joblib.load(scaler_path)
+            scaler_path = gcs_utils.join_path(self.preprocessors_dir, 'scaler.pkl')
+            if gcs_utils.exists(scaler_path):
+                self.scaler = gcs_utils.load_artifact(scaler_path)
                 logger.info(f"Loaded scaler from {scaler_path}")
                 
-            encoders_path = os.path.join(self.preprocessors_dir, 'encoders.pkl')
-            if os.path.exists(encoders_path):
-                self.encoders = joblib.load(encoders_path)
+            encoders_path = gcs_utils.join_path(self.preprocessors_dir, 'encoders.pkl')
+            if gcs_utils.exists(encoders_path):
+                self.encoders = gcs_utils.load_artifact(encoders_path)
                 logger.info(f"Loaded encoders from {encoders_path}")
         except Exception as e:
             logger.error(f"Failed to load artifacts: {e}")

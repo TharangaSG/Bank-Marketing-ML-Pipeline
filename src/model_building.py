@@ -27,11 +27,12 @@ class BaseModelBuilder(ABC):
     def save_model(self, filepath: str):
         if self.model is None:
             raise ValueError("No model to save.")
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        joblib.dump(self.model, filepath)
+        import src.gcs_utils as gcs_utils
+        gcs_utils.save_artifact(self.model, filepath)
     
     def load_model(self, filepath: str):
-        self.model = joblib.load(filepath)
+        import src.gcs_utils as gcs_utils
+        self.model = gcs_utils.load_artifact(filepath)
         return self.model
 
 

@@ -14,6 +14,8 @@ from src.model_building import ModelBuilderFactory
 from src.model_training import ModelTrainer
 from src.model_evaluation import ModelEvaluator
 from src.mlflow_utils import MLflowTracker
+import src.gcs_utils as gcs_utils
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -74,9 +76,9 @@ def training_pipeline():
     trained_model, cv_score = trainer.train(model, X_train, y_train)
     
     # 4. Save model
-    os.makedirs(config['data_paths']['train_artifacts_dir'], exist_ok=True)
+    gcs_utils.ensure_dir(config['data_paths']['train_artifacts_dir'])
     model_path = config['model']['model_path']
-    os.makedirs(os.path.dirname(model_path), exist_ok=True)
+    gcs_utils.ensure_dir(gcs_utils.dirname(model_path))
     builder.save_model(model_path)
     
     # 5. Evaluate model
