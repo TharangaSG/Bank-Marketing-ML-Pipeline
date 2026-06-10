@@ -17,14 +17,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install uv for blazing fast dependency installation
 RUN pip install --no-cache-dir uv
 
-# Copy only dependency definitions first to leverage Docker cache
-COPY pyproject.toml .
-
-# Install dependencies using uv directly into the system python
-RUN uv pip install --system .
-
-# Copy the rest of the application code
+# Copy the entire application code (including pyproject.toml and README.md)
 COPY . .
+
+# Install dependencies and the package using uv directly into the system python
+RUN uv pip install --system .
 
 # Default command (Airflow will override this dynamically)
 CMD ["python", "pipelines/data_pipeline.py"]
