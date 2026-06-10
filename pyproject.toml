@@ -19,3 +19,7 @@ dependencies = [
     "gcsfs>=2023.6.0",
     "google-cloud-storage>=2.10.0"
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

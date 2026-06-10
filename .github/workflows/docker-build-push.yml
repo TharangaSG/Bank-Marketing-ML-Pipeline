@@ -1,0 +1,64 @@
+name: Build and Push to GAR
+
+on:
+  push:
+    branches:
+      - main
+    # Only run if code changes occur in relevant files
+    paths:
+      - 'src/**'
+      - 'pipelines/**'
+      - 'pyproject.toml'
+      - 'Dockerfile'
+      - 'config.yaml'
+
+env:
+  PROJECT_ID: project-edd02cbd-005a-46d0-9ae
+  REGION: us-central1
+  GAR_REPO: bank-ml-repo
+  IMAGE_NAME: bank-ml-pipeline
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    
+    # Permissions required for Workload Identity Federation
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Setup GCP Authentication via Workload Identity Federation (Keyless, Secure) 
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          # Setup this Workload Identity Pool in GCP
+          # Format: projects/123456789/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          workload_identity_provider: 'projects/239180085796/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'bankml-service-account@project-edd02cbd-005a-46d0-9ae.iam.gserviceaccount.com'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Extract Branch Name
+        id: branch_name
+        run: echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker tag ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Push Docker Image to GAR
+        run: |
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:latest
