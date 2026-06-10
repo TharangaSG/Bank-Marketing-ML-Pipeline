@@ -19,7 +19,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 def load_config():
-    with open('config.yaml', 'r') as file:
+    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config.yaml')
+    with open(config_path, 'r') as file:
         return yaml.safe_load(file)
 
 def training_pipeline():
@@ -75,6 +76,7 @@ def training_pipeline():
     # 4. Save model
     os.makedirs(config['data_paths']['train_artifacts_dir'], exist_ok=True)
     model_path = config['model']['model_path']
+    os.makedirs(os.path.dirname(model_path), exist_ok=True)
     builder.save_model(model_path)
     
     # 5. Evaluate model

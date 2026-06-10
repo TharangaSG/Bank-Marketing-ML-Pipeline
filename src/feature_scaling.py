@@ -71,6 +71,23 @@ class StandardScalingStrategy(FeatureScalingStrategy):
         
         return df_scaled
     
+    def transform(self, df: pd.DataFrame, columns_to_scale: List[str]) -> pd.DataFrame:
+        """Apply scaling using the already-fitted scaler (no re-fitting)."""
+        logger.info(f"\n{'='*60}")
+        logger.info(f"FEATURE SCALING - TRANSFORM ONLY (STANDARD)")
+        logger.info(f"{'='*60}")
+        
+        df_scaled = df.copy()
+        available_cols = [col for col in columns_to_scale if col in df_scaled.columns]
+        
+        logger.info(f"Transforming {len(available_cols)} columns using pre-fitted scaler: {available_cols}")
+        df_scaled[available_cols] = self.scaler.transform(df_scaled[available_cols])
+        
+        logger.info(f"\n✓ TRANSFORM COMPLETE - {len(available_cols)} columns processed")
+        logger.info(f"{'='*60}\n")
+        
+        return df_scaled
+    
     def get_scaler(self):
         return self.scaler
 
@@ -109,6 +126,23 @@ class MinMaxScalingStrategy(FeatureScalingStrategy):
             logger.info(f"  {col}: Min={df_scaled[col].min():.4f}, Max={df_scaled[col].max():.4f}")
         
         logger.info(f"\n✓ MIN-MAX SCALING COMPLETE - {len(available_cols)} columns processed")
+        logger.info(f"{'='*60}\n")
+        
+        return df_scaled
+    
+    def transform(self, df: pd.DataFrame, columns_to_scale: List[str]) -> pd.DataFrame:
+        """Apply scaling using the already-fitted scaler (no re-fitting)."""
+        logger.info(f"\n{'='*60}")
+        logger.info(f"FEATURE SCALING - TRANSFORM ONLY (MIN-MAX)")
+        logger.info(f"{'='*60}")
+        
+        df_scaled = df.copy()
+        available_cols = [col for col in columns_to_scale if col in df_scaled.columns]
+        
+        logger.info(f"Transforming {len(available_cols)} columns using pre-fitted scaler: {available_cols}")
+        df_scaled[available_cols] = self.scaler.transform(df_scaled[available_cols])
+        
+        logger.info(f"\n✓ TRANSFORM COMPLETE - {len(available_cols)} columns processed")
         logger.info(f"{'='*60}\n")
         
         return df_scaled

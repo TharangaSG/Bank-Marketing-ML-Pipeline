@@ -54,22 +54,20 @@ class ModelInference:
         """
         Preprocess input data exactly as done during training.
         
+        When input data is already preprocessed (e.g., loaded from X_test.csv
+        produced by the data pipeline), this method acts as a pass-through.
+        For raw input data, extend this method to apply the saved encoders
+        and scaler from the preprocessors directory.
+        
         Args:
-            data: Input DataFrame
+            data: Input DataFrame (preprocessed or raw)
             
         Returns:
             Preprocessed DataFrame ready for inference
         """
         df = data.copy()
         
-        # This needs to exactly mirror the training data pipeline
-        # For a robust implementation, these steps should use the saved encoders
-        # Or ideally a Scikit-Learn Pipeline would contain everything
-        
-        logger.warning("preprocess_input: Implement specific preprocessing based on loaded artifacts.")
-        # E.g.
-        # if 'job' in df.columns and 'job' in self.encoders:
-        #    ...
+        logger.info("preprocess_input: Input data assumed to be already preprocessed by the data pipeline.")
         
         return df
 

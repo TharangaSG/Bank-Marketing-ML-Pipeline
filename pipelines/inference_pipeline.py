@@ -16,7 +16,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 def load_config():
-    with open('config.yaml', 'r') as file:
+    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config.yaml')
+    with open(config_path, 'r') as file:
         return yaml.safe_load(file)
 
 def inference_pipeline():
@@ -59,6 +60,7 @@ def inference_pipeline():
         
     except Exception as e:
         logger.error(f"Inference pipeline failed: {e}")
+        raise
 
 if __name__ == "__main__":
     inference_pipeline()

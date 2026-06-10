@@ -1,7 +1,7 @@
 """
 Data ingestion module for Bank Marketing ML Pipeline.
 Supports CSV data loading with comprehensive logging and validation.
-Follows the Factory pattern from the sample project.
+Follows the Factory pattern from the sample project, with PySpark compatibility.
 """
 
 import os
@@ -13,32 +13,48 @@ from typing import Optional, Union
 import pandas as pd
 import numpy as np
 
+# Manual PySpark availability flag
+PYSPARK_AVAILABLE = True
+
+if PYSPARK_AVAILABLE:
+    try:
+        from pyspark.sql import DataFrame as SparkDataFrame, SparkSession
+    except ImportError:
+        PYSPARK_AVAILABLE = False
+        SparkDataFrame = None
+        SparkSession = None
+else:
+    SparkDataFrame = None
+    SparkSession = None
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
 class DataIngestor(ABC):
-    """Abstract base class for data ingestion."""
+    """Abstract base class for data ingestion supporting both pandas and PySpark."""
     
+    def __init__(self, spark: Optional['SparkSession'] = None):
+        if PYSPARK_AVAILABLE and spark:
+            self.spark = spark
+        else:
+            self.spark = None
+
     @abstractmethod
-    def ingest(self, file_path: str) -> pd.DataFrame:
-        """
-        Ingest data from the specified path.
-        
-        Args:
-            file_path: Path to the data file
-            
-        Returns:
-            pandas DataFrame
-        """
+    def ingest(self, file_path: str, **options) -> Union[pd.DataFrame, 'SparkDataFrame']:
         pass
 
 
 class DataIngestorCSV(DataIngestor):
-    """CSV data ingestion implementation with comprehensive logging."""
+    """CSV data ingestion implementation supporting both pandas and PySpark."""
     
-    def ingest(self, file_path: str, **options) -> pd.DataFrame:
-        """Ingest CSV data using pandas."""
+    def ingest(self, file_path: str, **options) -> Union[pd.DataFrame, 'SparkDataFrame']:
+        if not PYSPARK_AVAILABLE or self.spark is None:
+            return self._ingest_pandas(file_path, **options)
+        else:
+            return self._ingest_pyspark(file_path, **options)
+            
+    def _ingest_pandas(self, file_path: str, **options) -> pd.DataFrame:
         start_time = time.time()
         
         logger.info(f"\n{'='*60}")
@@ -46,50 +62,43 @@ class DataIngestorCSV(DataIngestor):
         logger.info(f"{'='*60}")
         logger.info(f"🐼 Engine: Pandas")
         logger.info(f"🔗 Source: {file_path}")
-        logger.info(f"⚙️ Options: {options if options else 'Default pandas options'}")
         
         try:
             df = pd.read_csv(file_path, **options)
-            
-            # Enhanced logging with detailed metrics
             load_time = time.time() - start_time
-            memory_mb = df.memory_usage(deep=True).sum() / 1024**2
             
             logger.info(f"✅ CSV INGESTION COMPLETED")
             logger.info(f"📊 Dataset metrics:")
             logger.info(f"  • Shape: {df.shape[0]:,} rows × {df.shape[1]} columns")
-            logger.info(f"  • Memory usage: {memory_mb:.2f} MB")
-            logger.info(f"  • Load time: {load_time:.2f} seconds")
-            logger.info(f"  • Throughput: {df.shape[0]/load_time:,.0f} rows/second")
-            logger.info(f"🔍 Column overview:")
-            logger.info(f"  • Numeric: {len(df.select_dtypes(include=[np.number]).columns)} columns")
-            logger.info(f"  • Text/Object: {len(df.select_dtypes(include=['object']).columns)} columns")
-            logger.info(f"  • Sample columns: {list(df.columns[:5])}{'...' if len(df.columns) > 5 else ''}")
             logger.info(f"{'='*60}\n")
             
             return df
             
         except Exception as e:
             logger.error(f"✗ Failed to load CSV data from {file_path}: {str(e)}")
-            logger.info(f"{'='*60}\n")
             raise
 
-
-class DataIngestorExcel(DataIngestor):
-    """Excel data ingestion implementation."""
-    
-    def ingest(self, file_path: str, sheet_name: Optional[str] = None, **options) -> pd.DataFrame:
-        """Ingest Excel data using pandas."""
+    def _ingest_pyspark(self, file_path: str, **options) -> 'SparkDataFrame':
         logger.info(f"\n{'='*60}")
-        logger.info(f"📥 DATA INGESTION - EXCEL (PANDAS)")
+        logger.info(f"DATA INGESTION - CSV (PySpark)")
         logger.info(f"{'='*60}")
         
         try:
-            df = pd.read_excel(file_path, sheet_name=sheet_name, **options)
-            logger.info(f"✅ Excel ingestion completed - Shape: {df.shape}")
+            csv_options = {
+                "header": "true",
+                "inferSchema": "true",
+                "sep": options.get("sep", ",")
+            }
+            df = self.spark.read.options(**csv_options).csv(file_path)
+            
+            row_count = df.count()
+            logger.info(f"✓ Successfully loaded CSV data using PySpark - Shape: ({row_count}, {len(df.columns)})")
+            logger.info(f"{'='*60}\n")
+            
             return df
+            
         except Exception as e:
-            logger.error(f"✗ Failed to load Excel data: {str(e)}")
+            logger.error(f"✗ Failed to load CSV data via PySpark: {str(e)}")
             raise
 
 
@@ -97,21 +106,10 @@ class DataIngestorFactory:
     """Factory class to create appropriate data ingestor based on file type."""
     
     @staticmethod
-    def get_ingestor(file_path: str) -> DataIngestor:
-        """
-        Get appropriate data ingestor based on file extension.
-        
-        Args:
-            file_path: Path to the data file
-            
-        Returns:
-            DataIngestor: Appropriate ingestor instance
-        """
+    def get_ingestor(file_path: str, spark: Optional['SparkSession'] = None) -> DataIngestor:
         file_extension = os.path.splitext(file_path)[1].lower()
         
         if file_extension == '.csv':
-            return DataIngestorCSV()
-        elif file_extension in ['.xlsx', '.xls']:
-            return DataIngestorExcel()
+            return DataIngestorCSV(spark)
         else:
-            raise ValueError(f"Unsupported file type: {file_extension}")
+            raise ValueError(f"Unsupported file type for PySpark compatible ingestor: {file_extension}")
