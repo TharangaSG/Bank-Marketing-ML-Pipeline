@@ -312,7 +312,7 @@ model_validation:
 # MLflow Configuration
 # ==========================================
 mlflow:
-  tracking_uri: "sqlite:///mlflow.db"
+  tracking_uri: "https://us-central1-aiplatform.googleapis.com"
   experiment_name: "bank_marketing_experiment"
   run_name_prefix: "run"
   register_model: true

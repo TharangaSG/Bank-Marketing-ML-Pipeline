@@ -1,17 +1,13 @@
 from datetime import datetime, timedelta
 import os
-import sys
 
 from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.operators.bash import BashOperator
+from airflow.providers.google.cloud.operators.cloud_run import CloudRunExecuteJobOperator
 
-# Add project root to path
-sys.path.append('/home/tharangasg/projects/ML/Bank ML')
-
-from pipelines.data_pipeline import data_pipeline
-from pipelines.training_pipeline import training_pipeline
-from pipelines.inference_pipeline import inference_pipeline
+# GCP Configuration (These can also be pulled from Airflow Variables)
+PROJECT_ID = "project-edd02cbd-005a-46d0-9ae"
+REGION = "us-central1"
+JOB_NAME = "bank-ml-job"
 
 default_args = {
     'owner': 'airflow',
@@ -24,48 +20,63 @@ default_args = {
 }
 
 dag = DAG(
-    'bank_marketing_ml_pipeline',
+    'bank_marketing_cloud_run_pipeline',
     default_args=default_args,
-    description='End-to-end ML Pipeline for Bank Marketing',
-    schedule_interval=timedelta(days=1),
+    description='Serverless MLOps Pipeline using Cloud Run',
+    schedule=timedelta(days=1),
     catchup=False,
-    tags=['mlops', 'bank-marketing'],
+    tags=['mlops', 'gcp', 'cloud-run'],
 )
-
-# Wrapper functions for the Python operators
-def run_data_processing(**kwargs):
-    # Determine if we should use PySpark for data processing based on config or kwargs
-    # For now, default to pandas, but allow overriding
-    data_pipeline()
-
-def run_model_training(**kwargs):
-    training_pipeline()
-
-def run_batch_inference(**kwargs):
-    inference_pipeline()
 
 with dag:
     
-    # Optional: setup task to sync dependencies if needed
-    setup_env = BashOperator(
-        task_id='setup_environment',
-        bash_command='cd "/home/tharangasg/projects/ML/Bank ML" && uv sync'
-    )
-
-    data_processing_task = PythonOperator(
+    # 1. Data Processing Task
+    data_processing_task = CloudRunExecuteJobOperator(
         task_id='data_processing',
-        python_callable=run_data_processing,
+        project_id=PROJECT_ID,
+        region=REGION,
+        job_name=JOB_NAME,
+        overrides={
+            "container_overrides": [
+                {
+                    "args": ["python", "pipelines/data_pipeline.py"]
+                }
+            ]
+        },
+        deferrable=False,  # Turned off because Composer Triggerer is disabled
     )
 
-    model_training_task = PythonOperator(
+    # 2. Model Training Task
+    model_training_task = CloudRunExecuteJobOperator(
         task_id='model_training',
-        python_callable=run_model_training,
+        project_id=PROJECT_ID,
+        region=REGION,
+        job_name=JOB_NAME,
+        overrides={
+            "container_overrides": [
+                {
+                    "args": ["python", "pipelines/training_pipeline.py"]
+                }
+            ]
+        },
+        deferrable=False,
     )
 
-    batch_inference_task = PythonOperator(
+    # 3. Batch Inference Task
+    batch_inference_task = CloudRunExecuteJobOperator(
         task_id='batch_inference',
-        python_callable=run_batch_inference,
+        project_id=PROJECT_ID,
+        region=REGION,
+        job_name=JOB_NAME,
+        overrides={
+            "container_overrides": [
+                {
+                    "args": ["python", "pipelines/inference_pipeline.py"]
+                }
+            ]
+        },
+        deferrable=False,
     )
 
-    # Define dependencies
-    setup_env >> data_processing_task >> model_training_task >> batch_inference_task
+    # Define execution order
+    data_processing_task >> model_training_task >> batch_inference_task
